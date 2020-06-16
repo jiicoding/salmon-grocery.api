@@ -1,5 +1,6 @@
-const { create } = require('./user.service');
-const { genSaltSync, hashSync } = require('bcrypt');
+const { create, getUserByUsername } = require('./user.service');
+const { genSaltSync, hashSync, compareSync } = require('bcrypt');
+const { sign } = require('jsonwebtoken');
 
 module.exports = {
   createUser: (req, res) => {
@@ -47,6 +48,42 @@ module.exports = {
         success: true,
         data: results,
       });
+    });
+  },
+  login: (req, res) => {
+    const body = req.body;
+    getUserByUsername(body.username, (err, results) => {
+      if (err) {
+        return res.status(500).json({
+          success: false,
+          error: 'Username not found',
+        });
+      }
+
+      if (!results) {
+        return res.status(200).json({
+          success: false,
+          error: 'Username not found',
+        });
+      }
+
+      const result = compareSync(body.password, results.password);
+      if (result) {
+        results.password = undefined;
+        const jsontoken = sign({ result: results }, process.env.SECRET_KEY, {
+          expiresIn: '1h',
+        });
+
+        return res.status(200).json({
+          success: true,
+          token: jsontoken,
+        });
+      } else {
+        return res.status(200).json({
+          success: false,
+          error: 'password is incorrect',
+        });
+      }
     });
   },
 };
