@@ -14,9 +14,27 @@ module.exports = {
       ],
       (error, results) => {
         if (error) {
-          return callback(error);
+          return callback({
+            code: error.code,
+            message: error.sqlMessage,
+          });
         }
         return callback(null, results);
+      }
+    );
+  },
+  getUserByUsername: (username, callback) => {
+    pool.query(
+      `select * from Users where username = ?`,
+      [username],
+      (error, results) => {
+        if (error) {
+          return callback({
+            code: error.code,
+            message: error.sqlMessage,
+          });
+        }
+        return callback(null, results[0]);
       }
     );
   },
