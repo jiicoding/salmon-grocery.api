@@ -71,7 +71,7 @@ module.exports = {
       if (result) {
         results.password = undefined;
         const jsontoken = sign({ result: results }, process.env.SECRET_KEY, {
-          expiresIn: '1h',
+          expiresIn: '7d',
         });
 
         return res.status(200).json({
