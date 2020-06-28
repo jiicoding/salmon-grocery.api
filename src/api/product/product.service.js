@@ -46,14 +46,20 @@ module.exports = {
     }
   },
   getProducts: async (data) => {
-    const { size, page } = data;
-    const results = await pool.query(
-      `SELECT * FROM Products LIMIT ${(page - 1) * size}, ${size};`
-    );
-    if (!results[0].length) {
+    const { size, page, keyword } = data;
+    try {
+      const results = await pool.query(
+        `SELECT * FROM Products WHERE product_name LIKE '%${keyword}%' LIMIT ${
+          (page - 1) * size
+        }, ${size};`
+      );
+      if (!results[0].length) {
+        return [];
+      }
+      return results[0];
+    } catch (error) {
       return [];
     }
-    return results[0];
   },
   getMediaById: async (id) => {
     const results = await pool.query(

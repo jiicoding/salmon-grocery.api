@@ -75,7 +75,8 @@ module.exports = {
     });
   },
   getProducts: async (req, res) => {
-    const { page: reqPage, size: reqSize } = req.query;
+    const { page: reqPage, size: reqSize, key } = req.query;
+    let keyword = key || '';
     let page = 0;
     let size = 10;
 
@@ -87,7 +88,7 @@ module.exports = {
       size = Math.floor(reqSize);
     }
 
-    const products = await getProducts({ size, page });
+    const products = await getProducts({ size, page, keyword });
 
     const getProductMedia = products.map(async (prod) => {
       const images = await getMediaById(prod.id);
