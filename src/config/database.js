@@ -1,4 +1,4 @@
-const { createPool } = require('mysql');
+const { createPool } = require('mysql2/promise');
 
 const pool = createPool({
   port: process.env.PORT,

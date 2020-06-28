@@ -1,89 +1,97 @@
 const { create, getUserByUsername } = require('./user.service');
 const { genSaltSync, hashSync, compareSync } = require('bcrypt');
 const { sign } = require('jsonwebtoken');
+const { response } = require('express');
 
 module.exports = {
-  createUser: (req, res) => {
+  createUser: async (req, res) => {
     const body = req.body;
     const { username, password, phone_number, full_name } = body;
     if (!username) {
       return res.status(400).json({
         success: false,
-        error: 'username can not be empty or null.',
+        error: {
+          code: 'EMPTY_USERNAME',
+          message: 'username can not be empty or null.',
+        },
       });
     }
 
     if (!password) {
       return res.status(400).json({
         success: false,
-        error: 'password can not be empty or null.',
+        error: {
+          code: 'EMPTY_PASSWORD',
+          message: 'password can not be empty or null.',
+        },
       });
     }
 
     if (!phone_number) {
       return res.status(400).json({
         success: false,
-        error: 'phone_number can not be empty or null.',
+        error: {
+          code: 'EMPTY_PHONE_NUMBER',
+          message: 'phone_number can not be empty or null.',
+        },
       });
     }
 
     if (!full_name) {
       return res.status(400).json({
         success: false,
-        error: 'full_name can not be empty or null.',
+        error: {
+          code: 'EMPTY_FULL_NAME',
+          message: 'full_name can not be empty or null.',
+        },
       });
     }
 
     const salt = genSaltSync(10);
     body.password = hashSync(body.password, salt);
 
-    create(body, (err, results) => {
-      if (err) {
-        return res.status(500).json({
-          success: false,
-          error: err,
-        });
-      }
+    const result = await create(body);
+
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+
+    return res.status(200).json(result);
+  },
+  login: async (req, res) => {
+    const body = req.body;
+    const result = await getUserByUsername(body.username);
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+
+    const { id, password } = result.data;
+
+    const compareResult = compareSync(body.password, password);
+    if (compareResult) {
+      let responseData = { ...result.data };
+      delete responseData.id;
+      delete responseData.password;
+      delete responseData.role;
+      delete responseData.register_at;
+
+      const jsontoken = sign({ userId: id }, process.env.SECRET_KEY, {
+        expiresIn: '24h',
+      });
+
       return res.status(200).json({
         success: true,
-        data: results,
+        data: responseData,
+        token: jsontoken,
       });
-    });
-  },
-  login: (req, res) => {
-    const body = req.body;
-    getUserByUsername(body.username, (err, results) => {
-      if (err) {
-        return res.status(500).json({
-          success: false,
-          error: 'Username not found',
-        });
-      }
+    }
 
-      if (!results) {
-        return res.status(200).json({
-          success: false,
-          error: 'Username not found',
-        });
-      }
-
-      const result = compareSync(body.password, results.password);
-      if (result) {
-        results.password = undefined;
-        const jsontoken = sign({ result: results }, process.env.SECRET_KEY, {
-          expiresIn: '7d',
-        });
-
-        return res.status(200).json({
-          success: true,
-          token: jsontoken,
-        });
-      } else {
-        return res.status(200).json({
-          success: false,
-          error: 'password is incorrect',
-        });
-      }
+    return res.status(400).json({
+      success: false,
+      error: {
+        code: 'INCORRECT_PASSWORD',
+        message: 'password is incorrect',
+      },
     });
   },
 };
