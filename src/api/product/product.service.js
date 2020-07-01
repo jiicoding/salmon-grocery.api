@@ -61,6 +61,38 @@ module.exports = {
       return [];
     }
   },
+  getProductById: async (id) => {
+    try {
+      const results = await pool.query(
+        `
+      SELECT * FROM Products WHERE id = ?;
+    `,
+        [id]
+      );
+      if (results[0].length) {
+        return {
+          success: true,
+          data: results[0][0],
+        };
+      } else {
+        return {
+          success: false,
+          error: {
+            code: 'NOT_FOUND_PRODUCT',
+            message: `Not found product with id ${id}`,
+          },
+        };
+      }
+    } catch (error) {
+      return {
+        success: false,
+        error: {
+          code: error.code,
+          message: error.message,
+        },
+      };
+    }
+  },
   getMediaById: async (id) => {
     const results = await pool.query(
       `SELECT image_url FROM ProductsMedia WHERE product_id=?;`,
