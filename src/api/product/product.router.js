@@ -1,4 +1,9 @@
-const { addProductToDb, getProducts, getProductById } = require('./product.controller');
+const {
+  addProductToDb,
+  getProducts,
+  getProductById,
+  updateProductById,
+} = require('./product.controller');
 const router = require('express').Router();
 const { checkToken } = require('../../utils/auth/tokenValidation');
 const multer = require('multer');
@@ -14,6 +19,6 @@ router.post(
 
 router.get('/', checkToken, getProducts);
 router.get('/:productId', checkToken, getProductById);
-
+router.post('/:productId', checkToken, updateProductById);
 
 module.exports = router;

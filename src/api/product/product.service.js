@@ -93,6 +93,38 @@ module.exports = {
       };
     }
   },
+  updateProduct: async (data) => {
+    try {
+      const result = await pool.query(
+        `
+        UPDATE Products SET product_name=?, description=?, type=?, price=?, amount=? WHERE id=?;
+      `,
+        [
+          data.product_name,
+          data.description,
+          data.type,
+          data.price,
+          data.amount,
+          data.id,
+        ]
+      );
+
+      return {
+        success: true,
+        data: {
+          ...data,
+        },
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: {
+          code: error.code,
+          message: error.message,
+        },
+      };
+    }
+  },
   getMediaById: async (id) => {
     const results = await pool.query(
       `SELECT image_url FROM ProductsMedia WHERE product_id=?;`,

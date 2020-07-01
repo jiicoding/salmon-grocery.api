@@ -3,6 +3,7 @@ const {
   insertProductImage,
   getProducts,
   getProductById,
+  updateProduct,
   getMediaById,
 } = require('./product.service');
 const fs = require('fs');
@@ -105,6 +106,48 @@ module.exports = {
       success: true,
       data,
     });
+  },
+  updateProductById: async (req, res) => {
+    const { productId } = req.params;
+    const body = req.body;
+    const { product_name, type, price } = body;
+    if (!product_name) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'EMPTY_PRODUCT_NAME',
+          message: 'product name can not be empty or null.',
+        },
+      });
+    }
+
+    if (!type) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'EMPTY_TYPE',
+          message: 'type can not be empty or null.',
+        },
+      });
+    }
+
+    if (!price) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'EMPTY_PRICE',
+          message: 'price can not be empty or null.',
+        },
+      });
+    }
+
+    const result = await updateProduct({ id: productId, ...body });
+
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+
+    return res.status(200).json(result);
   },
   getProductById: async (req, res) => {
     const { productId } = req.params;
