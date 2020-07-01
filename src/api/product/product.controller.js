@@ -2,6 +2,7 @@ const {
   insertProduct,
   insertProductImage,
   getProducts,
+  getProductById,
   getMediaById,
 } = require('./product.service');
 const fs = require('fs');
@@ -104,5 +105,24 @@ module.exports = {
       success: true,
       data,
     });
+  },
+  getProductById: async (req, res) => {
+    const { productId } = req.params;
+
+    const result = await getProductById(productId);
+
+    if (result.success) {
+      const productMedia = await getMediaById(productId);
+
+      return res.status(200).json({
+        success: true,
+        data: {
+          ...result.data,
+          images: productMedia,
+        },
+      });
+    }
+
+    return res.status(400).json(result);
   },
 };
