@@ -5,20 +5,15 @@ const {
   updateProductById,
 } = require('./product.controller');
 const router = require('express').Router();
-const { checkToken } = require('../../utils/auth/tokenValidation');
-const multer = require('multer');
-
-const uploader = multer({ dest: 'src/public/upload' });
-
-router.post(
-  '/',
+const {
   checkToken,
-  uploader.array('media', process.env.MAX_UPLOADED_IMAGE),
-  addProductToDb
-);
+  checkAdminToken,
+} = require('../../utils/auth/tokenValidation');
+
+router.post('/', checkAdminToken, addProductToDb);
 
 router.get('/', checkToken, getProducts);
 router.get('/:productId', checkToken, getProductById);
-router.post('/:productId', checkToken, updateProductById);
+router.post('/:productId', checkAdminToken, updateProductById);
 
 module.exports = router;

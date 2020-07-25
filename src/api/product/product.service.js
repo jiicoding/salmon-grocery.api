@@ -1,5 +1,4 @@
 const pool = require('../../config/database');
-const path = require('path');
 
 module.exports = {
   insertProduct: async (data) => {
@@ -28,7 +27,7 @@ module.exports = {
   insertProductImage: async (data) => {
     try {
       await pool.query(
-        `insert into productsMedia(product_id, image_url) values(?,?)`,
+        `insert into productsmedia(product_id, image_url) values(?,?)`,
         [data.productId, data.url]
       );
       return {
@@ -122,15 +121,49 @@ module.exports = {
       };
     }
   },
-  getMediaById: async (id) => {
-    const results = await pool.query(
-      `SELECT image_url FROM productsmedia WHERE product_id=?;`,
-      [id]
-    );
-    if (!results[0].length) {
-      return [];
+  updateProductAmount: async (data) => {
+    try {
+      await pool.query(
+        `
+        UPDATE products SET amount=? WHERE id=?;
+      `,
+        [data.amount, data.id]
+      );
+
+      return {
+        success: true,
+        data: {
+          ...data,
+        },
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: {
+          code: error.code,
+          message: error.message,
+        },
+      };
     }
-    const mapImages = results[0].map((img) => path.resolve(img.image_url));
-    return mapImages;
+  },
+  getMediaById: async (id) => {
+    try {
+      const results = await pool.query(
+        `SELECT image_url FROM productsmedia WHERE product_id=?;`,
+        [id]
+      );
+      if (!results[0].length) {
+        return [];
+      }
+      return results[0];
+    } catch (error) {
+      return {
+        success: false,
+        error: {
+          code: error.code,
+          message: error.message,
+        },
+      };
+    }
   },
 };

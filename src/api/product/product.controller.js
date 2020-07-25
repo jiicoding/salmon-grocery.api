@@ -6,12 +6,18 @@ const {
   updateProduct,
   getMediaById,
 } = require('./product.service');
-const fs = require('fs');
+const cloudinary = require('cloudinary').v2;
+
+cloudinary.config({
+  cloud_name: process.env.CLOUD_NAME,
+  api_key: process.env.CLOUD_API_KEY,
+  api_secret: process.env.CLOUD_API_SECRET,
+});
 
 module.exports = {
   addProductToDb: async (req, res) => {
     const body = req.body;
-    const images = req.files || [];
+    let images = req.files.media || [];
     const { product_name, type, price } = body;
     if (!product_name) {
       return res.status(400).json({
@@ -43,6 +49,10 @@ module.exports = {
       });
     }
 
+    if (typeof images === 'object') {
+      images = [{ ...images }];
+    }
+
     const result = await insertProduct(body);
 
     if (!result.success) {
@@ -52,18 +62,22 @@ module.exports = {
     const { id } = result.data;
 
     const saveProductMedia = images.map(async (img) => {
-      let imageName = img.originalname || '';
-      imageName = imageName.trim().replace(/ /g, '-');
-      let imagePath = img.path;
-      imagePath = `${imagePath}-${imageName}`;
-      fs.renameSync(img.path, imagePath);
-      const saveImageResult = await insertProductImage({
-        productId: id,
-        url: imagePath,
-        image_name: imageName,
-      });
+      try {
+        const result = await cloudinary.uploader.upload(img.tempFilePath);
+        const { url } = result;
+        const saveImageResult = await insertProductImage({
+          productId: id,
+          url: url,
+          image_name: img.name,
+        });
 
-      return saveImageResult;
+        return saveImageResult;
+      } catch (error) {
+        return {
+          succees: false,
+          image_name: img.name,
+        };
+      }
     });
 
     const saveMediaResult = await Promise.all(saveProductMedia);

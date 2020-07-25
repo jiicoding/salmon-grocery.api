@@ -8,14 +8,19 @@ const {
   getOrdersByUserId,
   getOrderByCreatedDate,
   getOrderByShippedDate,
+  updateOrder,
 } = require('./order.service');
 
-const { getProductById } = require('../product/product.service');
+const {
+  getProductById,
+  updateProductAmount,
+} = require('../product/product.service');
+const { json } = require('express');
 
 module.exports = {
   createOrder: async (req, res) => {
     const body = req.body;
-    const { user_id, status, address, total, products } = body;
+    const { user_id, status, address, products } = body;
     if (!user_id) {
       return res.status(400).json({
         success: false,
@@ -46,16 +51,6 @@ module.exports = {
       });
     }
 
-    if (!total) {
-      return res.status(400).json({
-        success: false,
-        error: {
-          code: 'EMPTY_TOTAL',
-          message: 'order total price can not be empty or null.',
-        },
-      });
-    }
-
     if (!products || !products.length) {
       return res.status(400).json({
         success: false,
@@ -66,7 +61,64 @@ module.exports = {
       });
     }
 
-    const result = await createOrder(body);
+    let total = 0;
+
+    let isOutofStock = [];
+    let isNotEnough = [];
+
+    const checkProducts = products.map(async (prod) => {
+      if (isOutofStock.length || isNotEnough.length) return;
+
+      const results = await getProductById(prod.product_id);
+
+      if (!results.success) {
+        return res.status(400).json(results);
+      }
+
+      const { amount, product_name, id, price } = results.data;
+
+      if (amount <= 0) {
+        isOutofStock.push({
+          success: false,
+          error: {
+            code: 'OUT_OF_STOCK',
+            message: `create order failed! product: ${product_name} is out of stock.`,
+          },
+        });
+        return;
+      }
+
+      if (amount < prod.quantity) {
+        isNotEnough.push({
+          success: false,
+          error: {
+            code: 'NOT_ENOUGH_PROD',
+            message: `create order failed! product: ${product_name} is not enough amount`,
+          },
+        });
+        return;
+      }
+
+      total = total + price * prod.quantity;
+
+      return {
+        productId: id,
+        amount,
+        quantity: prod.quantity,
+      };
+    });
+
+    const productsDetail = await Promise.all(checkProducts);
+
+    if (isOutofStock.length) {
+      return res.status(400).json(isOutofStock[0]);
+    }
+
+    if (isNotEnough.length) {
+      return res.status(400).json(isNotEnough[0]);
+    }
+
+    const result = await createOrder({ ...body, total });
 
     if (!result.success) {
       return res.status(400).json(result);
@@ -74,20 +126,13 @@ module.exports = {
 
     const { id } = result.data;
 
-    const addProducts = products.map(async (prod) => {
-      if (prod.quantity <= 0 || prod.quantity > prod.amount) {
-        return {
-          success: false,
-          error: {
-            code: 'WRONG_QUANTITY',
-            message: `item's quantity is invalid`,
-          },
-        };
-      }
+    const addProducts = productsDetail.map(async (prod) => {
+      const { productId, amount, quantity } = prod;
+      await updateProductAmount({ id: productId, amount: amount - quantity });
       const result = await addProductIntoOrder({
         order_id: id,
-        product_id: prod.product_id,
-        quantity: prod.quantity,
+        product_id: productId,
+        quantity: quantity,
       });
 
       return result;
@@ -104,6 +149,33 @@ module.exports = {
   },
   updateOrder: async (req, res) => {
     const body = req.body;
+    const { address, shipped_date } = body;
+    const { orderId } = req.params;
+
+    if (!address) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'EMPTY_ADDRESS',
+          message: 'shipping address can not be empty or null.',
+        },
+      });
+    }
+
+    const results = await updateOrder({
+      id: orderId,
+      address,
+      shipped_date,
+    });
+
+    if (!results.success) {
+      return res.status(400).json(results);
+    }
+
+    return res.status(200).json(results);
+  },
+  updateOrderStatus: async (req, res) => {
+    const body = req.body;
     const { status } = body;
     const { orderId } = req.params;
 
@@ -112,12 +184,58 @@ module.exports = {
         success: false,
         error: {
           code: 'EMPTY_STATUS',
-          message: 'Product status can not be empty or null.',
+          message: 'order status can not be empty or null.',
         },
       });
     }
 
-    const result = await updateOrderStatus({ id: orderId, ...body });
+    if (!['submitted', 'canceled', 'shipping', 'completed'].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'INVALID_STATUS',
+          message: 'Invalid status',
+        },
+      });
+    }
+
+    const orderDetailResult = await getOrderById(orderId);
+
+    if (!orderDetailResult.success) {
+      return res.status(400).json(orderDetailResult);
+    }
+
+    const { status: currentOrderStatus } = orderDetailResult.data;
+
+    if (['canceled', 'completed'].includes(currentOrderStatus)) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: `ORDER_${currentOrderStatus.toUpperCase()}`,
+          message: `Update status failed! order current status is ${currentOrderStatus}`,
+        },
+      });
+    }
+
+    if (status === 'canceled') {
+      const productsInOrder = await getProductsInOrder(orderId);
+
+      const updateProductsAmount = productsInOrder.map(async (prod) => {
+        const { product_id, quantity } = prod;
+        const results = await getProductById(product_id);
+        if (!results.success) {
+          return json.status(400).json(results);
+        }
+        const { amount } = results.data;
+        const newAmount = amount + quantity;
+
+        await updateProductAmount({ id: product_id, amount: newAmount });
+      });
+
+      await Promise.all(updateProductsAmount);
+    }
+
+    const result = await updateOrderStatus({ id: orderId, status });
 
     if (!result.success) {
       return res.status(400).json(result);

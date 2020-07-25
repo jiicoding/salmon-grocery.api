@@ -5,14 +5,8 @@ module.exports = {
   createOrder: async (data) => {
     try {
       const result = await pool.query(
-        `insert into orders(user_id, status, shipped_date, address, total) values (?,?,?,?,?)`,
-        [
-          data.user_id,
-          data.status,
-          moment(data.shipped_date).format('YYYY-MM-DD HH:mm:ss'),
-          data.address,
-          data.total,
-        ]
+        `insert into orders(user_id, status, address, total) values (?,?,?,?)`,
+        [data.user_id, data.status, data.address, data.total]
       );
       const { insertId } = result[0];
       return {
@@ -38,11 +32,36 @@ module.exports = {
         [data.order_id, data.product_id, data.quantity]
       );
       const { insertId } = result[0];
-      console.log(result);
       return {
         success: true,
         data: {
           id: insertId,
+        },
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: {
+          code: error.code,
+          message: error.message,
+        },
+      };
+    }
+  },
+  updateOrder: async (data) => {
+    try {
+      const shippedDate = data.shipped_date
+        ? moment(data.shipped_date).format('YYYY-MM-DD HH:mm:ss')
+        : null;
+      await pool.query(
+        `update orders set shipped_date=?, address=? where id=?;`,
+        [shippedDate, data.status, data.id]
+      );
+
+      return {
+        success: true,
+        data: {
+          message: 'Update order information success',
         },
       };
     } catch (error) {
