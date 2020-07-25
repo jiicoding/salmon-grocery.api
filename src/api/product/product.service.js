@@ -53,9 +53,6 @@ module.exports = {
           (page - 1) * size
         }, ${size};`
       );
-      if (!results[0].length) {
-        return [];
-      }
       return results[0];
     } catch (error) {
       return [];
