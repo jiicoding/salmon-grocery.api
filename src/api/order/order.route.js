@@ -5,6 +5,8 @@ const {
   getOrderByCreatedDate,
   getOrderByShippedDate,
   getOrderByUserId,
+  updateOrderStatus,
+  updateOrder
 } = require('./order.controller');
 const router = require('express').Router();
 const { checkToken, checkAdminToken } = require('../../utils/auth/tokenValidation');
@@ -15,5 +17,7 @@ router.post('/createdDate', checkAdminToken, getOrderByCreatedDate);
 router.post('/shippedDate', checkAdminToken, getOrderByShippedDate);
 router.post('/user', checkToken, getOrderByUserId);
 router.post('/', checkToken, createOrder);
+router.post('/status/:orderId', checkToken, updateOrderStatus);
+router.post('/:orderId', checkAdminToken, updateOrder)
 
 module.exports = router;

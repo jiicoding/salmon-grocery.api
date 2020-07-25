@@ -121,6 +121,31 @@ module.exports = {
       };
     }
   },
+  updateProductAmount: async (data) => {
+    try {
+      await pool.query(
+        `
+        UPDATE products SET amount=? WHERE id=?;
+      `,
+        [data.amount, data.id]
+      );
+
+      return {
+        success: true,
+        data: {
+          ...data,
+        },
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: {
+          code: error.code,
+          message: error.message,
+        },
+      };
+    }
+  },
   getMediaById: async (id) => {
     try {
       const results = await pool.query(
