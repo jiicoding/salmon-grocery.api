@@ -12,6 +12,6 @@ app.use('/api/user', userRouter);
 app.use('/api/product', productRouter);
 app.use('/api/order', orderRouter);
 
-app.listen(process.env.APP_PORT, () => {
-  console.log('Server is listening at port:', process.env.APP_PORT);
+app.listen(process.env.PORT, () => {
+  console.log('Server is listening at port:', process.env.PORT);
 });
