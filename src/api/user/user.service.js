@@ -29,6 +29,34 @@ module.exports = {
       };
     }
   },
+  createAdminUser: async (data) => {
+    try {
+      await pool.query(
+        `insert into users(username, password, phone_number, email, full_name, role) values (?,?,?,?,?,?);`,
+        [
+          data.username,
+          data.password,
+          data.phone_number,
+          data.email,
+          data.full_name,
+          1,
+        ]
+      );
+
+      return {
+        success: true,
+        message: 'Create new user success',
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: {
+          code: error.code,
+          message: error.message,
+        },
+      };
+    }
+  },
   getUserByUsername: async (username) => {
     try {
       const result = await pool.query(
