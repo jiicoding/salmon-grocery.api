@@ -4,7 +4,7 @@ module.exports = {
   create: async (data) => {
     try {
       await pool.query(
-        `insert into Users(username, password, phone_number, email, full_name, address) values (?,?,?,?,?,?);`,
+        `insert into users(username, password, phone_number, email, full_name, address) values (?,?,?,?,?,?);`,
         [
           data.username,
           data.password,
@@ -32,7 +32,7 @@ module.exports = {
   getUserByUsername: async (username) => {
     try {
       const result = await pool.query(
-        `select * from Users where username = ?`,
+        `select * from users where username = ?`,
         [username]
       );
       if (!result[0].length) {

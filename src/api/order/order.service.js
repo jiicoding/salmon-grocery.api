@@ -5,7 +5,7 @@ module.exports = {
   createOrder: async (data) => {
     try {
       const result = await pool.query(
-        `insert into Orders(user_id, status, shipped_date, address, total) values (?,?,?,?,?)`,
+        `insert into orders(user_id, status, shipped_date, address, total) values (?,?,?,?,?)`,
         [
           data.user_id,
           data.status,
@@ -34,7 +34,7 @@ module.exports = {
   addProductIntoOrder: async (data) => {
     try {
       const result = await pool.query(
-        `insert into ProductOrder(order_id, product_id, quantity) values (?,?,?)`,
+        `insert into productorder(order_id, product_id, quantity) values (?,?,?)`,
         [data.order_id, data.product_id, data.quantity]
       );
       const { insertId } = result[0];
@@ -57,7 +57,7 @@ module.exports = {
   },
   updateOrderStatus: async (data) => {
     try {
-      await pool.query(`update Orders set status=? where id=?;`, [
+      await pool.query(`update orders set status=? where id=?;`, [
         data.status,
         data.id,
       ]);
@@ -82,7 +82,7 @@ module.exports = {
     try {
       const results = await pool.query(
         `
-        SELECT product_id, quantity FROM ProductOrder WHERE order_id = ?;
+        SELECT product_id, quantity FROM productorder WHERE order_id = ?;
       `,
         [id]
       );
@@ -99,7 +99,7 @@ module.exports = {
     const { size, page } = data;
     try {
       const results = await pool.query(
-        `SELECT * FROM Orders LIMIT ${(page - 1) * size}, ${size};`
+        `SELECT * FROM orders LIMIT ${(page - 1) * size}, ${size};`
       );
       return results[0];
     } catch (error) {
@@ -110,7 +110,7 @@ module.exports = {
     try {
       const results = await pool.query(
         `
-          SELECT * FROM Orders WHERE id = ?;
+          SELECT * FROM orders WHERE id = ?;
         `,
         [id]
       );
@@ -143,7 +143,7 @@ module.exports = {
     try {
       const results = await pool.query(
         `
-          SELECT * FROM Orders WHERE user_id = ? LIMIT ${
+          SELECT * FROM orders WHERE user_id = ? LIMIT ${
             (page - 1) * size
           }, ${size};;
         `,
@@ -164,7 +164,7 @@ module.exports = {
     const { size, page } = data;
     try {
       const results = await pool.query(
-        `SELECT * FROM Orders WHERE create_at >= ? AND create_at <= ? LIMIT ${
+        `SELECT * FROM orders WHERE create_at >= ? AND create_at <= ? LIMIT ${
           (page - 1) * size
         }, ${size};`,
         [
@@ -187,7 +187,7 @@ module.exports = {
     const { size, page } = data;
     try {
       const results = await pool.query(
-        `SELECT * FROM Orders WHERE create_at >= ? AND shipped_date  <= ? LIMIT ${
+        `SELECT * FROM orders WHERE create_at >= ? AND shipped_date  <= ? LIMIT ${
           (page - 1) * size
         }, ${size};`,
         [

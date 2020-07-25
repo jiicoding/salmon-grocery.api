@@ -5,7 +5,7 @@ module.exports = {
   insertProduct: async (data) => {
     try {
       const result = await pool.query(
-        `insert into Products(product_name, description, type, price) values (?,?,?,?)`,
+        `insert into products(product_name, description, type, price) values (?,?,?,?)`,
         [data.product_name, data.description, data.type, data.price]
       );
       const { insertId } = result[0];
@@ -28,7 +28,7 @@ module.exports = {
   insertProductImage: async (data) => {
     try {
       await pool.query(
-        `insert into ProductsMedia(product_id, image_url) values(?,?)`,
+        `insert into productsMedia(product_id, image_url) values(?,?)`,
         [data.productId, data.url]
       );
       return {
@@ -49,7 +49,7 @@ module.exports = {
     const { size, page, keyword } = data;
     try {
       const results = await pool.query(
-        `SELECT * FROM Products WHERE product_name LIKE '%${keyword}%' LIMIT ${
+        `SELECT * FROM products WHERE product_name LIKE '%${keyword}%' LIMIT ${
           (page - 1) * size
         }, ${size};`
       );
@@ -62,7 +62,7 @@ module.exports = {
     try {
       const results = await pool.query(
         `
-      SELECT * FROM Products WHERE id = ?;
+      SELECT * FROM products WHERE id = ?;
     `,
         [id]
       );
@@ -94,7 +94,7 @@ module.exports = {
     try {
       const result = await pool.query(
         `
-        UPDATE Products SET product_name=?, description=?, type=?, price=?, amount=? WHERE id=?;
+        UPDATE products SET product_name=?, description=?, type=?, price=?, amount=? WHERE id=?;
       `,
         [
           data.product_name,
@@ -124,7 +124,7 @@ module.exports = {
   },
   getMediaById: async (id) => {
     const results = await pool.query(
-      `SELECT image_url FROM ProductsMedia WHERE product_id=?;`,
+      `SELECT image_url FROM productsmedia WHERE product_id=?;`,
       [id]
     );
     if (!results[0].length) {
