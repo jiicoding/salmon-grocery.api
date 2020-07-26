@@ -20,23 +20,13 @@ const { json } = require('express');
 module.exports = {
   createOrder: async (req, res) => {
     const body = req.body;
-    const { user_id, status, address, products } = body;
+    const { user_id, address, products } = body;
     if (!user_id) {
       return res.status(400).json({
         success: false,
         error: {
           code: 'EMPTY_USER',
           message: 'user id can not be empty or null.',
-        },
-      });
-    }
-
-    if (!status) {
-      return res.status(400).json({
-        success: false,
-        error: {
-          code: 'EMPTY_STATUS',
-          message: 'order status can not be empty or null.',
         },
       });
     }
@@ -65,9 +55,21 @@ module.exports = {
 
     let isOutofStock = [];
     let isNotEnough = [];
+    let isInValidQuantity = [];
 
     const checkProducts = products.map(async (prod) => {
-      if (isOutofStock.length || isNotEnough.length) return;
+      if (isOutofStock.length || isNotEnough.length || isValidQuantity.length)
+        return;
+
+      if (isNaN(prod.quantity) || prod.quantity < 0) {
+        isInValidQuantity.push({
+          success: false,
+          error: {
+            code: INVALID_QUANTITY,
+            message: `Invalid product quantity`,
+          },
+        });
+      }
 
       const results = await getProductById(prod.product_id);
 
@@ -118,7 +120,11 @@ module.exports = {
       return res.status(400).json(isNotEnough[0]);
     }
 
-    const result = await createOrder({ ...body, total });
+    if (isInValidQuantity.length) {
+      return res.status(400).json(isInValidQuantity[0]);
+    }
+
+    const result = await createOrder({ ...body, total, status: 'waitting' });
 
     if (!result.success) {
       return res.status(400).json(result);
@@ -149,7 +155,7 @@ module.exports = {
   },
   updateOrder: async (req, res) => {
     const body = req.body;
-    const { address, shipped_date } = body;
+    const { address, shipped_date, products } = body;
     const { orderId } = req.params;
 
     if (!address) {
@@ -162,17 +168,138 @@ module.exports = {
       });
     }
 
+    if (!products || !products.length) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'EMPTY_USER',
+          message: 'order total price can not be empty or null.',
+        },
+      });
+    }
+
+    const orderDetailResult = await getOrderById(orderId);
+
+    if (!orderDetailResult.success) {
+      return res.status(400).json(orderDetailResult);
+    }
+
+    const { status } = orderDetailResult.data;
+
+    if (['canceled', 'completed'].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: `ORDER_${status.toUpperCase()}`,
+          message: `Update status failed! order current status is ${status}`,
+        },
+      });
+    }
+
+    let total = 0;
+
+    let isOutofStock = [];
+    let isNotEnough = [];
+    let isInValidQuantity = [];
+
+    const checkProducts = products.map(async (prod) => {
+      if (isOutofStock.length || isNotEnough.length || isValidQuantity.length)
+        return;
+
+      if (isNaN(prod.quantity) || prod.quantity < 0) {
+        isInValidQuantity.push({
+          success: false,
+          error: {
+            code: INVALID_QUANTITY,
+            message: `Invalid product quantity`,
+          },
+        });
+      }
+
+      const results = await getProductById(prod.product_id);
+
+      if (!results.success) {
+        return res.status(400).json(results);
+      }
+
+      const { amount, product_name, id, price } = results.data;
+
+      if (amount <= 0) {
+        isOutofStock.push({
+          success: false,
+          error: {
+            code: 'OUT_OF_STOCK',
+            message: `create order failed! product: ${product_name} is out of stock.`,
+          },
+        });
+        return;
+      }
+
+      if (amount < prod.quantity) {
+        isNotEnough.push({
+          success: false,
+          error: {
+            code: 'NOT_ENOUGH_PROD',
+            message: `create order failed! product: ${product_name} is not enough amount`,
+          },
+        });
+        return;
+      }
+
+      total = total + price * prod.quantity;
+
+      return {
+        productId: id,
+        amount,
+        quantity: prod.quantity,
+      };
+    });
+
+    const productsDetail = await Promise.all(checkProducts);
+
+    if (isOutofStock.length) {
+      return res.status(400).json(isOutofStock[0]);
+    }
+
+    if (isNotEnough.length) {
+      return res.status(400).json(isNotEnough[0]);
+    }
+
+    if (isInValidQuantity.length) {
+      return res.status(400).json(isInValidQuantity[0]);
+    }
+
     const results = await updateOrder({
       id: orderId,
       address,
       shipped_date,
+      total
     });
 
     if (!results.success) {
       return res.status(400).json(results);
     }
 
-    return res.status(200).json(results);
+    const addProducts = productsDetail.map(async (prod) => {
+      const { productId, amount, quantity } = prod;
+      await updateProductAmount({ id: productId, amount: amount - quantity });
+      const result = await addProductIntoOrder({
+        order_id: orderId,
+        product_id: productId,
+        quantity: quantity,
+      });
+
+      return result;
+    });
+
+    await Promise.all(addProducts);
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        message: 'Update order success',
+      },
+    });
   },
   updateOrderStatus: async (req, res) => {
     const body = req.body;
