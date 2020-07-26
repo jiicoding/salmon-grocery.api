@@ -4,8 +4,14 @@ module.exports = {
   insertProduct: async (data) => {
     try {
       const result = await pool.query(
-        `insert into products(product_name, description, type, price) values (?,?,?,?)`,
-        [data.product_name, data.description, data.type, data.price]
+        `insert into products(product_name, description, type, price, amount) values (?,?,?,?,?)`,
+        [
+          data.product_name,
+          data.description,
+          data.type,
+          data.price,
+          data.amount,
+        ]
       );
       const { insertId } = result[0];
       return {

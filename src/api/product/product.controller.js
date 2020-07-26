@@ -18,7 +18,7 @@ module.exports = {
   addProductToDb: async (req, res) => {
     const body = req.body;
     let images = req.files.media || [];
-    const { product_name, type, price } = body;
+    const { product_name, type, price, amount } = body;
     if (!product_name) {
       return res.status(400).json({
         success: false,
@@ -49,6 +49,16 @@ module.exports = {
       });
     }
 
+    if (!amount || isNaN(amount) || amount < 0) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'INVALID_AMOUNT',
+          message: 'Invalid amount',
+        },
+      });
+    }
+
     if (!Array.isArray(images)) {
       images = [{ ...images }];
     }
@@ -72,7 +82,6 @@ module.exports = {
 
         return saveImageResult;
       } catch (error) {
-        console.log(error)
         return {
           succees: false,
           image_name: img.name,
