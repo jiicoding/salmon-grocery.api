@@ -54,8 +54,8 @@ module.exports = {
         ? moment(data.shipped_date).format('YYYY-MM-DD HH:mm:ss')
         : null;
       await pool.query(
-        `update orders set shipped_date=?, address=? where id=?;`,
-        [shippedDate, data.status, data.id]
+        `update orders set shipped_date=?, address=?, total=? where id=?;`,
+        [shippedDate, data.status, data.total, data.id]
       );
 
       return {
