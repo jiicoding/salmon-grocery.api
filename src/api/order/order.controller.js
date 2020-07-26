@@ -195,7 +195,7 @@ module.exports = {
       return res.status(400).json(orderDetailResult);
     }
 
-    const { status } = orderDetailResult.data;
+    const { status, products: oldProducts } = orderDetailResult.data;
 
     if (['canceled', 'completed'].includes(status)) {
       return res.status(400).json({
@@ -222,7 +222,7 @@ module.exports = {
         isInValidQuantity.push({
           success: false,
           error: {
-            code: "INVALID_QUANTITY",
+            code: 'INVALID_QUANTITY',
             message: `Invalid product quantity`,
           },
         });
@@ -237,7 +237,16 @@ module.exports = {
       }
 
       const { amount, product_name, id, price } = results.data;
-      const oldAmount = amount + prod.quantity;
+      let currentAmount = amount;
+
+      const oldProductData = oldProducts.filter(
+        (e) => e.product_id === prod.id
+      );
+
+      if (oldProductData[0]) {
+        const { amount: oldAmount } = oldProductData[0];
+        currentAmount = amount + oldAmount;
+      }
 
       if (amount <= 0) {
         isOutofStock.push({
@@ -250,7 +259,7 @@ module.exports = {
         return;
       }
 
-      if (oldAmount < prod.quantity) {
+      if (currentAmount < prod.quantity) {
         isNotEnough.push({
           success: false,
           error: {
@@ -265,7 +274,7 @@ module.exports = {
 
       await updateProductAmount({
         id: prod.product_id,
-        amount: oldAmount - prod.quantity,
+        amount: currentAmount - prod.quantity,
       });
 
       return {
