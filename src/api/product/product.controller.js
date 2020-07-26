@@ -49,7 +49,7 @@ module.exports = {
       });
     }
 
-    if (typeof images === 'object') {
+    if (!Array.isArray(images)) {
       images = [{ ...images }];
     }
 
@@ -60,7 +60,6 @@ module.exports = {
     }
 
     const { id } = result.data;
-
     const saveProductMedia = images.map(async (img) => {
       try {
         const result = await cloudinary.uploader.upload(img.tempFilePath);
@@ -73,6 +72,7 @@ module.exports = {
 
         return saveImageResult;
       } catch (error) {
+        console.log(error)
         return {
           succees: false,
           image_name: img.name,
