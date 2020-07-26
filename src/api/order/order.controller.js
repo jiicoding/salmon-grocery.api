@@ -53,12 +53,18 @@ module.exports = {
 
     let total = 0;
 
+    let notFoundProduct = [];
     let isOutofStock = [];
     let isNotEnough = [];
     let isInValidQuantity = [];
 
     const checkProducts = products.map(async (prod) => {
-      if (isOutofStock.length || isNotEnough.length || isValidQuantity.length)
+      if (
+        isOutofStock.length ||
+        isNotEnough.length ||
+        isInValidQuantity.length ||
+        notFoundProduct.length
+      )
         return;
 
       if (isNaN(prod.quantity) || prod.quantity < 0) {
@@ -74,7 +80,8 @@ module.exports = {
       const results = await getProductById(prod.product_id);
 
       if (!results.success) {
-        return res.status(400).json(results);
+        notFoundProduct.push(results);
+        return;
       }
 
       const { amount, product_name, id, price } = results.data;
@@ -111,6 +118,10 @@ module.exports = {
     });
 
     const productsDetail = await Promise.all(checkProducts);
+
+    if (notFoundProduct.length) {
+      return res.status(400).json(notFoundProduct[0]);
+    }
 
     if (isOutofStock.length) {
       return res.status(400).json(isOutofStock[0]);
@@ -198,55 +209,64 @@ module.exports = {
 
     let total = 0;
 
+    let notFoundProduct = [];
     let isOutofStock = [];
     let isNotEnough = [];
     let isInValidQuantity = [];
 
     const checkProducts = products.map(async (prod) => {
-      if (isOutofStock.length || isNotEnough.length || isValidQuantity.length)
+      if (isOutofStock.length || isNotEnough.length || isInValidQuantity.length)
         return;
 
       if (isNaN(prod.quantity) || prod.quantity < 0) {
         isInValidQuantity.push({
           success: false,
           error: {
-            code: INVALID_QUANTITY,
+            code: "INVALID_QUANTITY",
             message: `Invalid product quantity`,
           },
         });
+        return;
       }
 
       const results = await getProductById(prod.product_id);
 
       if (!results.success) {
-        return res.status(400).json(results);
+        notFoundProduct.push(results);
+        return;
       }
 
       const { amount, product_name, id, price } = results.data;
+      const oldAmount = amount + prod.quantity;
 
       if (amount <= 0) {
         isOutofStock.push({
           success: false,
           error: {
             code: 'OUT_OF_STOCK',
-            message: `create order failed! product: ${product_name} is out of stock.`,
+            message: `update order failed! product: ${product_name} is out of stock.`,
           },
         });
         return;
       }
 
-      if (amount < prod.quantity) {
+      if (oldAmount < prod.quantity) {
         isNotEnough.push({
           success: false,
           error: {
             code: 'NOT_ENOUGH_PROD',
-            message: `create order failed! product: ${product_name} is not enough amount`,
+            message: `update order failed! product: ${product_name} is not enough amount`,
           },
         });
         return;
       }
 
       total = total + price * prod.quantity;
+
+      await updateProductAmount({
+        id: prod.product_id,
+        amount: oldAmount - prod.quantity,
+      });
 
       return {
         productId: id,
@@ -256,6 +276,10 @@ module.exports = {
     });
 
     const productsDetail = await Promise.all(checkProducts);
+
+    if (notFoundProduct.length) {
+      return res.status(400).json(notFoundProduct[0]);
+    }
 
     if (isOutofStock.length) {
       return res.status(400).json(isOutofStock[0]);
@@ -273,7 +297,7 @@ module.exports = {
       id: orderId,
       address,
       shipped_date,
-      total
+      total,
     });
 
     if (!results.success) {

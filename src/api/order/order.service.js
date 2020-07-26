@@ -55,7 +55,7 @@ module.exports = {
         : null;
       await pool.query(
         `update orders set shipped_date=?, address=?, total=? where id=?;`,
-        [shippedDate, data.status, data.total, data.id]
+        [shippedDate, data.address, data.total, data.id]
       );
 
       return {
