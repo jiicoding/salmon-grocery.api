@@ -196,7 +196,7 @@ module.exports = {
       return res.status(400).json(orderDetailResult);
     }
 
-    const { status, products: oldProducts } = orderDetailResult.data;
+    const { status } = orderDetailResult.data;
 
     if (['canceled', 'completed'].includes(status)) {
       return res.status(400).json({
@@ -231,6 +231,7 @@ module.exports = {
       }
 
       const results = await getProductById(prod.product_id);
+      const oldProducts = await getProductsInOrder(orderId);
 
       if (!results.success) {
         notFoundProduct.push(results);
@@ -241,15 +242,15 @@ module.exports = {
       let currentAmount = amount;
 
       const oldProductData = oldProducts.filter(
-        (e) => e.product_id === prod.id
+        (e) => e.product_id === prod.product_id
       );
 
       if (oldProductData[0]) {
-        const { amount: oldAmount } = oldProductData[0];
-        currentAmount = amount + oldAmount;
+        const { quantity: oldQuantity } = oldProductData[0];
+        currentAmount = amount + oldQuantity;
       }
 
-      if (amount <= 0) {
+      if (currentAmount <= 0) {
         isOutofStock.push({
           success: false,
           error: {
@@ -316,7 +317,6 @@ module.exports = {
 
     const addProducts = productsDetail.map(async (prod) => {
       const { productId, amount, quantity } = prod;
-      await updateProductAmount({ id: productId, amount: amount - quantity });
       const result = await updateProductIntoOrder({
         order_id: orderId,
         product_id: productId,
