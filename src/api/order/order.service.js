@@ -48,6 +48,28 @@ module.exports = {
       };
     }
   },
+  updateProductIntoOrder: async (data) => {
+    try {
+      await pool.query(
+        `update productorder set quantity=? where order_id=? and product_id=?`,
+        [data.quantity, data.order_id, data.product_id]
+      );
+      return {
+        success: true,
+        data: {
+          message: 'Update success',
+        },
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: {
+          code: error.code,
+          message: error.message,
+        },
+      };
+    }
+  },
   updateOrder: async (data) => {
     try {
       const shippedDate = data.shipped_date

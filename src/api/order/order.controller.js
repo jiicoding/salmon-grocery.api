@@ -1,6 +1,7 @@
 const {
   createOrder,
   addProductIntoOrder,
+  updateProductIntoOrder,
   updateOrderStatus,
   getOrderById,
   getProductsInOrder,
@@ -316,7 +317,7 @@ module.exports = {
     const addProducts = productsDetail.map(async (prod) => {
       const { productId, amount, quantity } = prod;
       await updateProductAmount({ id: productId, amount: amount - quantity });
-      const result = await addProductIntoOrder({
+      const result = await updateProductIntoOrder({
         order_id: orderId,
         product_id: productId,
         quantity: quantity,
