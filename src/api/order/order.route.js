@@ -18,6 +18,6 @@ router.post('/shippedDate', checkAdminToken, getOrderByShippedDate);
 router.post('/user', checkToken, getOrderByUserId);
 router.post('/', checkToken, createOrder);
 router.post('/status/:orderId', checkToken, updateOrderStatus);
-router.post('/:orderId', checkAdminToken, updateOrder)
+router.post('/:orderId', checkToken, updateOrder)
 
 module.exports = router;
